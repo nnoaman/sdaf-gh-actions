@@ -26,3 +26,27 @@ This script helps to automate the setup of a GitHub App, repository secrets, env
 5. Running the Script
 
     `python sdaf_github_actions.py`
+
+### To-Do Section
+
+ 1. **Error Handling and Validation**
+
+    - Validate user inputs.
+    - Ensure `private_key_path` exists before reading the file.
+    - Add validation for Azure CLI command outputs and GitHub API responses.
+
+ 2. **Dynamic Workflow Handling**
+
+ 3. **Logging**
+
+    - Use `logging` module for better debug logs and traceability.
+
+ 4. **Retry Mechanism**
+
+    - Implement retries for transient errors (e.g., API requests, Azure CLI commands).
+
+ 5. **Azure CLI Check**
+
+    - Verify that Azure CLI is installed before attempting to use it.
+
+ 6. **Test Cases**
