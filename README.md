@@ -16,12 +16,13 @@ This script helps to automate the setup of a GitHub App, repository secrets, env
 2. **Create a Virtual Environment**: Create and activate a virtual environment.
 
     `python3 -m venv venv`
+   
     `source venv/bin/activate`  # On Windows use `venv\Scripts\activate`
 
-3. **Install Dependencies**: Install the required Python libraries.
+4. **Install Dependencies**: Install the required Python libraries.
 
     `pip install -r requirements.txt`
 
-4. Running the Script
+5. Running the Script
 
     `python sdaf_github_actions.py`
