@@ -4,7 +4,7 @@ This script helps to automate the setup of a GitHub App, repository secrets, env
 
 ### Prerequisites
 
-1. **Python**: Ensure Python 3.x is installed on your machine. You can download it from [Microsoft's website](https://www.python.org/downloads/).
+1. **Python**: Ensure Python 3.x is installed on your machine. You can download it from [Python offcial website](https://www.python.org/downloads/).
 2. **Azure CLI**: Ensure the Azure CLI is installed. You can download it from [Azure CLI installation guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli).
 
 ### Installation
