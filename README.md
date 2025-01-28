@@ -1,6 +1,7 @@
 # sdaf-gh-actions
 
-#github_actions 
+This script helps to automate the setup of a GitHub App, repository secrets, environment, and connection to Azure for deploying SAP Deployment Automation Framework on Azure
+
 #### Prerequisites
 
 1. **Python**: Ensure Python 3.x is installed on your machine. You can download it from [python.org](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html).
