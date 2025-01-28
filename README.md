@@ -15,10 +15,8 @@ This script helps to automate the setup of a GitHub App, repository secrets, env
 
 2. **Create a Virtual Environment**: Create and activate a virtual environment.
 
-    ```
-    python3 -m venv venv
-    source venv/bin/activate  # On Windows use venv\Scripts\activate
-    ```
+    `python3 -m venv venv`
+    `source venv/bin/activate`  # On Windows use `venv\Scripts\activate`
 
 3. **Install Dependencies**: Install the required Python libraries.
 
