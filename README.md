@@ -2,14 +2,17 @@
 
 This script helps to automate the setup of a GitHub App, repository secrets, environment, and connection to Azure for deploying SAP Deployment Automation Framework on Azure
 
-#### Prerequisites
+### Prerequisites
 
-1. **Python**: Ensure Python 3.x is installed on your machine. You can download it from [python.org](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html).
-2. **Azure CLI**: Ensure the Azure CLI is installed. You can download it from [Microsoft's website](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html).
+1. **Python**: Ensure Python 3.x is installed on your machine. You can download it from [Microsoft's website](https://www.python.org/downloads/).
+2. **Azure CLI**: Ensure the Azure CLI is installed. You can download it from [Azure CLI installation guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli).
 
-#### Installation
+### Installation
 
-1. **Clone the Repository**: clone the repository containing the script (or similar to SDAF Powershell script)
+1. **Clone the Repository**: clone the repository
+
+    `git clone https://github.com/nnoaman/sdaf-gh-actions.git`
+
 2. **Create a Virtual Environment**: Create and activate a virtual environment.
 
     `python3 -m venv venv`
@@ -17,9 +20,8 @@ This script helps to automate the setup of a GitHub App, repository secrets, env
 
 3. **Install Dependencies**: Install the required Python libraries.
 
-	`pip install -r requirements.txt`
+    `pip install -r requirements.txt`
 
 4. Running the Script
 
-	`python sdaf_github_actions.py`
-
+    `python sdaf_github_actions.py`
