@@ -109,6 +109,14 @@ def get_user_input():
     tenant_id = input("Enter your Azure Tenant ID: ").strip()
     spn_name = input("Enter the name for the new Azure Service Principal: ").strip()
 
+    # SAP S-User credentials
+    add_suser = input("\nDo you want to add SAP S-User credentials? (y/n): ").strip().lower()
+    s_username = ""
+    s_password = ""
+    if add_suser in ['y', 'yes']:
+        s_username = input("Enter your SAP S-Username: ").strip()
+        s_password = getpass.getpass("Enter your SAP S-User password: ").strip()
+
     # Read the private key
     with open(private_key_path, "r") as file:
         private_key = file.read()
@@ -127,6 +135,8 @@ def get_user_input():
         "subscription_id": subscription_id,
         "tenant_id": tenant_id,
         "spn_name": spn_name,
+        "s_username": s_username,
+        "s_password": s_password,
     }
 
 
@@ -201,6 +211,33 @@ def create_azure_service_principal(user_data):
         )
         print(result.stdout)
         return None
+    
+    # Get the service principal object ID
+    spn_show_command = [
+        "az",
+        "ad",
+        "sp",
+        "show",
+        "--id",
+        spn_data["appId"],
+    ]
+    spn_show_result = subprocess.run(spn_show_command, capture_output=True, text=True)
+    if spn_show_result.returncode != 0:
+        print(
+            "Failed to retrieve service principal object ID. Please check the Azure CLI command output."
+        )
+        print(spn_show_result.stderr)
+        return None
+
+    try:
+        spn_show_data = json.loads(spn_show_result.stdout)
+        spn_object_id = spn_show_data["id"]
+    except json.JSONDecodeError:
+        print(
+            "Failed to decode JSON from the output. Please check the Azure CLI command output."
+        )
+        print(spn_show_result.stdout)
+        return None
 
     # Assign User Access Administrator role
     role_assignment_command = [
@@ -223,6 +260,7 @@ def create_azure_service_principal(user_data):
     except subprocess.CalledProcessError as e:
         print(f"Error assigning roles to Service Principal: {e.output}")
 
+    spn_data["object_id"] = spn_object_id
     return spn_data
 
 
@@ -311,8 +349,11 @@ def main():
     environment_secrets = {
         "AZURE_CLIENT_ID": spn_data["appId"],
         "AZURE_CLIENT_SECRET": spn_data["password"],
+        "AZURE_OBJECT_ID": spn_data["object_id"],
         "AZURE_SUBSCRIPTION_ID": user_data["subscription_id"],
         "AZURE_TENANT_ID": user_data["tenant_id"],
+        "S_USERNAME": user_data["s_username"],
+        "S_PASSWORD": user_data["s_password"],
     }
 
     add_environment_secrets(
