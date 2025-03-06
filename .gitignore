@@ -1,0 +1,42 @@
+# Generated based on @workspace settings
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Node.js dependencies
+node_modules/
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build directories
+dist/
+build/
+
+# Temporary files
+temp/
+*.tmp
+
+# IDE settings
+.vscode/
+.idea/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Miscellaneous
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Python Tools for Visual Studio (PTVS)
+__pycache__/
+__pycache__
+*.pyc
+.venv/

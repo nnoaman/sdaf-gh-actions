@@ -1,34 +1,104 @@
-# sdaf-gh-actions
+# SAP Azure Automation Tool
 
-This script helps to automate the setup of a GitHub App, repository secrets, environment, and connection to Azure for deploying SAP Deployment Automation Framework on Azure
+A modular tool for automating the setup of SAP Deployment Automation Framework on Azure.
 
-### Prerequisites
+## Overview
 
-1. **Python**: Ensure Python 3.x is installed on your machine. You can download it from [Python official website](https://www.python.org/downloads/).
-2. **Azure CLI**: Ensure the Azure CLI is installed. You can download it from [Azure CLI installation guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli).
+This tool helps you streamline the process of setting up a GitHub repository with the necessary configurations to deploy SAP systems on Azure. It handles:
 
-### Installation
+- GitHub App creation and configuration
+- Repository secrets setup
+- Azure Service Principal creation
+- Environment configuration
+- Federated identity credential setup
 
-1. **Clone the Repository**: clone the repository
+## Features
 
-    `git clone https://github.com/nnoaman/sdaf-gh-actions.git`
+- **Text User Interface (TUI)**: Easy-to-use interactive interface
+- **Modular Architecture**: Well-organized code for maintainability
+- **Secure Credential Handling**: Safe storage of sensitive information
+- **Step-by-Step Guidance**: Clear instructions throughout the process
+- **Validation**: Input validation to prevent errors
 
-2. **Create a Virtual Environment**: Create and activate a virtual environment.
+## Prerequisites
 
-    `python3 -m venv venv`
-   
-    `source venv/bin/activate`  # On Windows use `venv\Scripts\activate`
+Before using the tool, ensure you have:
 
-4. **Install Dependencies**: Install the required Python libraries.
+1. Created a repository using the Azure SAP Automation Deployer template
+   - [GitHub Template](https://github.com/new?template_name=azure-sap-automation-deployer&template_owner=NSpirit7)
+2. Created a GitHub personal access token (PAT) with necessary permissions
+   - [Generate Token](https://github.com/settings/tokens)
+3. Access to an Azure subscription where you have Owner permissions
+4. Python 3.8 or newer installed on your system
 
-    `pip install -r requirements.txt`
+## Installation
 
-5. Running the Script
+### Using pip
 
-    `python sdaf_github_actions.py`
+```bash
+pip install sdaf-gh-actions
+```
 
-### To-Do Section
+### From source
 
+```bash
+git clone https://github.com/nnoaman/sdaf-gh-actions.git
+cd sdaf-gh-actions
+pip install -e .
+```
+
+## Usage
+
+### Interactive Mode (TUI)
+
+Simply run the tool to start the interactive Text User Interface:
+
+```bash
+sdaf-gh-actions
+```
+
+The TUI will guide you through the setup process step by step.
+
+### Configuration
+
+By default, configuration is stored in `~/.sap_deployment_automation/`. You can specify a different location:
+
+```bash
+sdaf-gh-actions --config-dir /path/to/config
+```
+
+## Development
+
+### Project Structure
+
+```
+sdaf-gh-actions/
+├── core/                     # Core functionality
+│   ├── github_manager.py     # GitHub operations
+│   ├── azure_manager.py      # Azure operations
+│   ├── config_manager.py     # Configuration handling
+│   └── workflow_manager.py   # Workflow automation
+├── ui/                       # User interface
+│   ├── tui.py                # Text User Interface
+│   └── validators.py         # Input validation
+├── utils/                    # Utilities
+│   ├── logging_utils.py      # Logging utilities
+└── tests/                    # Tests
+```
+
+### Development Setup
+
+1. Clone the repository
+2. Install development dependencies:
+   ```bash
+   pip install -e ".[dev]"
+   ```
+3. Run tests:
+   ```bash
+   pytest
+   ```
+
+## TODO
  1. **Error Handling and Validation**
 
     - Validate user inputs.
@@ -50,3 +120,7 @@ This script helps to automate the setup of a GitHub App, repository secrets, env
     - Verify that Azure CLI is installed before attempting to use it.
 
  6. **Test Cases**
+   
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

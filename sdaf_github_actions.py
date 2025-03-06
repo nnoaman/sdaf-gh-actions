@@ -110,10 +110,12 @@ def get_user_input():
     spn_name = input("Enter the name for the new Azure Service Principal: ").strip()
 
     # SAP S-User credentials
-    add_suser = input("\nDo you want to add SAP S-User credentials? (y/n): ").strip().lower()
+    add_suser = (
+        input("\nDo you want to add SAP S-User credentials? (y/n): ").strip().lower()
+    )
     s_username = ""
     s_password = ""
-    if add_suser in ['y', 'yes']:
+    if add_suser in ["y", "yes"]:
         s_username = input("Enter your SAP S-Username: ").strip()
         s_password = getpass.getpass("Enter your SAP S-User password: ").strip()
 
@@ -211,7 +213,7 @@ def create_azure_service_principal(user_data):
         )
         print(result.stdout)
         return None
-    
+
     # Get the service principal object ID
     spn_show_command = [
         "az",
@@ -373,4 +375,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
