@@ -40,7 +40,7 @@ from .validators import (
 )
 
 
-class ValidatedInput(Input):
+class ValidatedInput(Widget):
     """Input widget with validation"""
 
     def __init__(
@@ -50,6 +50,7 @@ class ValidatedInput(Input):
         validators: List[Callable[[str], Optional[str]]] = None,
         value: str = "",
         password: bool = False,
+        id: Optional[str] = None,
     ):
         """
         Initialize validated input widget.
@@ -60,30 +61,64 @@ class ValidatedInput(Input):
             validators: List of validator functions
             value: Initial value
             password: Whether to mask input as password
+            id: Widget identifier
         """
-        super().__init__(value=value, placeholder=placeholder, password=password)
+        super().__init__(id=id)
         self.label_text = label
         self.validators = validators or []
         self.validation_error = ""
+        self.placeholder = placeholder
+        self._value = value
+        self.password = password
 
     def compose(self) -> ComposeResult:
         """Compose the input with label and validation message"""
         yield Label(self.label_text, classes="input-label")
-        yield super()  # Include the input itself
-        yield Label("", classes="validation-error", id=f"{self.id}-error")
+        yield Input(
+            value=self._value,
+            placeholder=self.placeholder,
+            password=self.password,
+            id=f"{self.id}-input" if self.id else None,
+        )
+        yield Label(
+            "", classes="validation-error", id=f"{self.id}-error" if self.id else None
+        )
 
-    def validate(self) -> bool:
+    @property
+    def value(self) -> str:
+        """Get the current input value"""
+        try:
+            return self.query_one(Input).value
+        except NoMatches:
+            return self._value
+
+    @value.setter
+    def value(self, new_value: str) -> None:
+        """Set the input value"""
+        self._value = new_value
+        try:
+            input_widget = self.query_one(Input)
+            input_widget.value = new_value
+        except NoMatches:
+            pass  # Widget not mounted yet
+
+    def validate(self, value=None) -> bool:
         """
         Validate input against all validators.
+
+        Args:
+            value: Value to validate (uses self.value if None)
 
         Returns:
             bool: True if validation passes, False otherwise
         """
         self.validation_error = ""
-        value = self.value
+
+        # Use provided value or current input value
+        val = value if value is not None else self.value
 
         for validator in self.validators:
-            error = validator(value)
+            error = validator(val)
             if error:
                 self.validation_error = error
                 break
@@ -95,6 +130,11 @@ class ValidatedInput(Input):
             pass
 
         return self.validation_error == ""
+
+    def on_input_changed(self, event) -> None:
+        """Handle input change events"""
+        # Validate on input change if needed
+        pass
 
 
 class WelcomeScreen(Screen):
