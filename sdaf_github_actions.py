@@ -118,8 +118,22 @@ def get_user_input():
         s_password = getpass.getpass("Enter your SAP S-User password: ").strip()
 
     # Read the private key
-    with open(private_key_path, "r") as file:
-        private_key = file.read()
+    try:
+        # Normalize path for cross-platform compatibility
+        normalized_path = os.path.normpath(os.path.expanduser(private_key_path))
+        with open(normalized_path, "r") as file:
+            private_key = file.read()
+    except FileNotFoundError:
+        print(f"Error: Could not find the private key file at: {private_key_path}")
+        print("Make sure you've entered the correct file path.")
+        exit(1)
+    except PermissionError:
+        print(f"Error: Permission denied when trying to read: {private_key_path}")
+        print("Make sure you have the necessary permissions to read this file.")
+        exit(1)
+    except Exception as e:
+        print(f"Error reading private key file: {str(e)}")
+        exit(1)
 
     return {
         "token": token,
