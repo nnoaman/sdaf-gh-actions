@@ -350,7 +350,7 @@ def main():
     if spn_data is None:
         return
 
-    trigger_github_workflow(user_data, "create-environment.yaml")
+    trigger_github_workflow(user_data, "create-environment.yml")
 
     # Prompt for environment name after triggering the workflow
     environment_name = input(
