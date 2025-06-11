@@ -13,11 +13,17 @@ This script helps to automate the setup of a GitHub App, repository secrets, env
 
     `git clone https://github.com/nnoaman/sdaf-gh-actions.git`
 
-2. **Create a Virtual Environment**: Create and activate a virtual environment.
+2. Change directory
+    `cd sdaf-gh-actions`
+
+3. **Create a Virtual Environment**: Create and activate a virtual environment.
 
     `python3 -m venv venv`
-   
-    `source venv/bin/activate`  # On Windows use `venv\Scripts\activate`
+
+    `source venv/bin/activate`
+
+    # On Windows use
+    `venv\Scripts\activate`
 
 4. **Install Dependencies**: Install the required Python libraries.
 
