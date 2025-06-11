@@ -20,10 +20,17 @@ This script helps to automate the setup of a GitHub App, repository secrets, env
 
     `python3 -m venv venv`
 
+    On Unix/Linux/macOS (bash/zsh):
+
     `source venv/bin/activate`
 
-    # On Windows use
-    `venv\Scripts\activate`
+    On Windows (Command Prompt):
+
+    `venv\Scripts\activate.bat`
+
+    On Windows (PowerShell):
+
+    `venv\Scripts\Activate.ps1`
 
 4. **Install Dependencies**: Install the required Python libraries.
 
