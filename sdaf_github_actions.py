@@ -179,14 +179,16 @@ def add_environment_secrets(github_client, repo_full_name, environment_name, sec
 
 def azure_login():
     """
-    Login to Azure using the Azure CLI.
+    Login to Azure using the Azure CLI with device code authentication.
     """
     print("\nLogging in to Azure...\n")
-    login_command = ["az", "login", "--scope", "https://graph.microsoft.com//.default"]
-    result = subprocess.run(login_command, capture_output=True, text=True)
+    print("You will receive a code to enter in your browser to complete the login.")
+    
+    login_command = ["az", "login", "--use-device-code", "--scope", "https://graph.microsoft.com//.default"]
+    result = subprocess.run(login_command)
+    
     if result.returncode != 0:
         print("Failed to login to Azure. Please check your credentials and try again.")
-        print(result.stderr)
         exit(1)
     print("Successfully logged in to Azure.")
 
@@ -328,6 +330,9 @@ def trigger_github_workflow(user_data, workflow_id):
 def main():
     display_instructions()
 
+    # Ensure Azure CLI is installed and login first to verify Azure access
+    azure_login()
+
     # Get user inputs
     user_data = get_user_input()
 
@@ -341,9 +346,6 @@ def main():
         "APPLICATION_ID": user_data["gh_app_id"],
     }
     add_repository_secrets(github_client, user_data["repo_name"], secrets)
-
-    # Ensure Azure CLI is installed and login
-    azure_login()
 
     # Create Azure Service Principal
     spn_data = create_azure_service_principal(user_data)
