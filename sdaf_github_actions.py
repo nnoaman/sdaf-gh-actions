@@ -493,7 +493,7 @@ def trigger_github_workflow(user_data, workflow_id):
 
 
 def main():
-    check_prerequisites()
+    #check_prerequisites()
     display_instructions()
 
     # Ensure Azure CLI is installed and login first to verify Azure access
