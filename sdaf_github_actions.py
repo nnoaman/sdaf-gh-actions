@@ -3,6 +3,7 @@ import json
 import getpass
 import os
 import subprocess
+import shutil
 import platform
 import sys
 import time
@@ -16,7 +17,13 @@ def check_prerequisites():
 
     # Check Azure CLI
     try:
-        subprocess.run(["az", "--version"], capture_output=True, check=True, text=True)
+        exe = shutil.which("az") or shutil.which("az.cmd")
+        if not exe:
+            raise FileNotFoundError("Azure CLI not found in PATH.")
+        # Check if Azure CLI is installed and working
+        print("Azure CLI found. Checking version...")
+        cmd = [exe, "--version"]
+        subprocess.run(cmd, capture_output=True, check=True, universal_newlines=True)
         print("Azure CLI is installed.")
     except (FileNotFoundError, subprocess.CalledProcessError):
         print("Azure CLI not found. Please install it:")
@@ -277,9 +284,12 @@ def azure_login():
     """
     print("\nLogging in to Azure...\n")
     print("You will receive a code to enter in your browser to complete the login.")
+    exe = shutil.which("az") or shutil.which("az.cmd")
+    if not exe:
+        raise FileNotFoundError("Azure CLI not found in PATH. Install or add to PATH.")
     
-    login_command = ["az", "login", "--use-device-code", "--scope", "https://graph.microsoft.com//.default"]
-    result = subprocess.run(login_command)
+    login_command = [exe, "login", "--use-device-code", "--scope", "https://graph.microsoft.com//.default"]
+    result = subprocess.run(login_command, check=True)
     
     if result.returncode != 0:
         print("Failed to login to Azure. Please check your credentials and try again.")
@@ -493,7 +503,7 @@ def trigger_github_workflow(user_data, workflow_id):
 
 
 def main():
-    #check_prerequisites()
+    check_prerequisites()
     display_instructions()
 
     # Ensure Azure CLI is installed and login first to verify Azure access
