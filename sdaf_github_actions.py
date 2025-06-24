@@ -377,18 +377,20 @@ def get_user_input():
         s_username = input("Enter your SAP S-Username: ").strip()
         s_password = getpass.getpass("Enter your SAP S-User password: ").strip()
     
-    # Ask for resource group name instead of auto-generating it
-    print("\nYou need to specify a resource group for creating the Managed Identity.")
-    default_resource_group = f"{environment}-INFRASTRUCTURE-RG"
-    print(f"The default resource group name would be: {default_resource_group}")
-    use_default_rg = input(f"Would you like to use this default name? (y/n): ").strip().lower()
-    resource_group_name = default_resource_group
-    if use_default_rg not in ['y', 'yes']:
-        while True:
-            resource_group_name = input("Enter your desired resource group name: ").strip()
-            if resource_group_name:
-                break
-            print("Resource group name cannot be empty. Please enter a valid name.")
+    # Ask for resource group name only if Managed Identity is selected
+    resource_group_name = ""
+    if use_managed_identity:
+        print("\nYou need to specify a resource group for creating the Managed Identity.")
+        default_resource_group = f"{environment}-INFRASTRUCTURE-RG"
+        print(f"The default resource group name would be: {default_resource_group}")
+        use_default_rg = input(f"Would you like to use this default name? (y/n): ").strip().lower()
+        resource_group_name = default_resource_group
+        if use_default_rg not in ['y', 'yes']:
+            while True:
+                resource_group_name = input("Enter your desired resource group name: ").strip()
+                if resource_group_name:
+                    break
+                print("Resource group name cannot be empty. Please enter a valid name.")
 
     return {
         "token": token,
@@ -1017,31 +1019,33 @@ def main():
     print("\nStarting setup process...\n")
     user_data = get_user_input()
     
-    # Set up Azure resource group for identity (using the user-provided resource group)
-    resource_group = user_data["resource_group"]
-    print(f"\nChecking if resource group {resource_group} exists...")
-    if not verify_resource_group(resource_group, user_data["subscription_id"]):
-        print(f"Resource group {resource_group} doesn't exist. Creating it...")
-        # Location from user's region_map
-        create_rg_args = [
-            "group", 
-            "create", 
-            "--name", 
-            resource_group, 
-            "--location", 
-            user_data["region_map"]
-        ]
-        rg_result = run_az_command(create_rg_args, capture_output=True, text=True)
-        if rg_result.returncode != 0:
-            print(f"Failed to create resource group {resource_group}:")
-            print(rg_result.stderr)
-            print("Cannot continue without a valid resource group. Exiting.")
-            exit(1)
-
-    print("\nCreating necessary credentials for GitHub Actions...\n")
-    
     # Check if user selected Managed Identity or Service Principal
     use_managed_identity = user_data.get("auth_choice", "1") == "2"
+    
+    # Only set up resource group if using Managed Identity
+    resource_group = ""
+    if use_managed_identity:
+        resource_group = user_data["resource_group"]
+        print(f"\nChecking if resource group {resource_group} exists...")
+        if not verify_resource_group(resource_group, user_data["subscription_id"]):
+            print(f"Resource group {resource_group} doesn't exist. Creating it...")
+            # Location from user's region_map
+            create_rg_args = [
+                "group", 
+                "create", 
+                "--name", 
+                resource_group, 
+                "--location", 
+                user_data["region_map"]
+            ]
+            rg_result = run_az_command(create_rg_args, capture_output=True, text=True)
+            if rg_result.returncode != 0:
+                print(f"Failed to create resource group {resource_group}:")
+                print(rg_result.stderr)
+                print("Cannot continue without a valid resource group. Exiting.")
+                exit(1)
+
+    print("\nCreating necessary credentials for GitHub Actions...\n")
     
     if use_managed_identity:
         # Create a User-Assigned Managed Identity
@@ -1095,19 +1099,17 @@ def main():
         # Set up environment variables for Managed Identity
         environment_variables.update({
             "AZURE_CLIENT_ID": identity_data["clientId"],
+            "AZURE_OBJECT_ID": identity_data["principalId"],
         })
-        # Add the Azure object ID to environment secrets
-        environment_secrets["AZURE_OBJECT_ID"] = identity_data["principalId"]
         print("Environment configuration prepared for User Managed Identity")
     else:
         # Set up environment variables and secrets for Service Principal
         environment_variables.update({
             "AZURE_CLIENT_ID": spn_data["appId"],
+            "AZURE_OBJECT_ID": spn_data["object_id"],
         })
         # Add client secret to secrets (sensitive)
         environment_secrets["AZURE_CLIENT_SECRET"] = spn_data["password"]
-        # Add the Azure object ID to environment secrets
-        environment_secrets["AZURE_OBJECT_ID"] = spn_data["object_id"]
         print("Environment configuration prepared for Service Principal (USE_MSI=false)")
 
     # Add SAP S-User password to secrets (sensitive), with a placeholder if not provided
