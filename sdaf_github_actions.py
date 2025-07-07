@@ -1419,8 +1419,8 @@ def main():
     
     # Prepare environment variables (non-sensitive information)
     environment_variables = {
-        "AZURE_SUBSCRIPTION_ID": user_data["subscription_id"],
-        "AZURE_TENANT_ID": user_data["tenant_id"],
+        "ARM_SUBSCRIPTION_ID": user_data["subscription_id"],
+        "ARM_TENANT_ID": user_data["tenant_id"],
         "USE_MSI": "true" if use_managed_identity else "false",
         # Add S_USERNAME with a placeholder if not provided
         "S_USERNAME": user_data["s_username"] if user_data["s_username"] else "Add SAP S Username here"
@@ -1433,28 +1433,28 @@ def main():
         # For Managed Identity, set up both SPN (for initial auth) and MSI details
         # Set up environment variables for User-Assigned Managed Identity as primary auth method
         environment_variables.update({
-            "AZURE_CLIENT_ID": identity_data["clientId"],
-            "AZURE_OBJECT_ID": identity_data["principalId"],
+            "ARM_CLIENT_ID": identity_data["clientId"],
+            "ARM_OBJECT_ID": identity_data["principalId"],
         })
         
         # But also add SPN details for initial authentication
         environment_variables.update({
-            "AZURE_SPN_CLIENT_ID": spn_for_github_auth["appId"],
-            "AZURE_SPN_OBJECT_ID": spn_for_github_auth["object_id"],
+            "ARM_SPN_CLIENT_ID": spn_for_github_auth["appId"],
+            "ARM_SPN_OBJECT_ID": spn_for_github_auth["object_id"],
         })
         
         # Add client secret to secrets (sensitive)
-        environment_secrets["AZURE_SPN_CLIENT_SECRET"] = spn_for_github_auth["password"]
+        environment_secrets["ARM_SPN_CLIENT_SECRET"] = spn_for_github_auth["password"]
         
         print("Environment configuration prepared for User Managed Identity with SPN for initial authentication")
     else:
         # Set up environment variables and secrets for Service Principal only
         environment_variables.update({
-            "AZURE_CLIENT_ID": spn_data["appId"],
-            "AZURE_OBJECT_ID": spn_data["object_id"],
+            "ARM_CLIENT_ID": spn_data["appId"],
+            "ARM_OBJECT_ID": spn_data["object_id"],
         })
         # Add client secret to secrets (sensitive)
-        environment_secrets["AZURE_CLIENT_SECRET"] = spn_data["password"]
+        environment_secrets["ARM_CLIENT_SECRET"] = spn_data["password"]
         print("Environment configuration prepared for Service Principal (USE_MSI=false)")
 
     # Add SAP S-User password to secrets (sensitive), with a placeholder if not provided
@@ -1515,7 +1515,7 @@ def main():
     print("   properly assigned before running workflows.")
     
     # First trigger the environment creation workflow
-    workflow_id = "create-environment.yml"
+    workflow_id = "00-create-environment.yml"
     print(f"\nTriggering workflow '{workflow_id}' to create the environment...")
     trigger_github_workflow(user_data, workflow_id)
     print("Environment creation workflow has been triggered.")
