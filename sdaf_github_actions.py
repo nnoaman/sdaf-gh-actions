@@ -440,7 +440,9 @@ def get_user_input():
             except (json.JSONDecodeError, KeyError):
                 print("Failed to get Object ID from Service Principal data.")
                 print(spn_show_result.stdout)
-                exit(1)
+                print("\n\033[1;33mWARNING: Using a placeholder value for Object ID.\033[0m")
+                print("This may cause issues during deployment. You should verify the Object ID manually.")
+                spn_object_id = "PLACEHOLDER-OBJECT-ID"
                 
     else:
         # Only ask for SPN name if creating a new one
@@ -649,7 +651,7 @@ def create_user_assigned_identity(identity_name, resource_group, subscription_id
     # Define the roles to assign
     roles = [
         "Contributor",
-        "Role Based Access Control Administrator",
+        "User Access Administrator",
         "Storage Blob Data Owner",
         "Key Vault Administrator",
         "App Configuration Data Owner"
@@ -755,10 +757,29 @@ def create_azure_service_principal(user_data):
         print(f"\nUsing existing Service Principal '{user_data['spn_name']}'...\n")
         
         # Create a data structure that matches the expected output
+        # Ensure all required fields are present, use placeholders if missing
+        app_id = user_data["spn_appid"]
+        password = user_data["spn_password"]
+        object_id = user_data["spn_object_id"]
+        
+        # Validate critical fields and set placeholders if missing
+        if not app_id:
+            print("\n\033[1;33mWARNING: Application ID is missing. Using placeholder value.\033[0m")
+            app_id = "PLACEHOLDER-APP-ID"
+        
+        if not password:
+            print("\n\033[1;33mWARNING: Client secret is missing. Using placeholder value.\033[0m")
+            password = "PLACEHOLDER-CLIENT-SECRET"
+        
+        if not object_id:
+            print("\n\033[1;33mWARNING: Object ID is missing. Using placeholder value.\033[0m")
+            print("This may cause issues during deployment. You should verify the Object ID manually.")
+            object_id = "PLACEHOLDER-OBJECT-ID"
+        
         spn_data = {
-            "appId": user_data["spn_appid"],
-            "password": user_data["spn_password"],
-            "object_id": user_data["spn_object_id"]
+            "appId": app_id,
+            "password": password,
+            "object_id": object_id
         }
         
         # Diagnose any potential issues with the Service Principal
@@ -815,6 +836,7 @@ def create_azure_service_principal(user_data):
                     print("  - Contributor")
                     print("  - Storage Blob Data Owner")
                     print("  - Key Vault Administrator")
+                    print("  - App Configuration Data Owner")
                     print("\nPlease have an Azure subscription administrator assign these roles")
                     print("to the Service Principal before deploying SAP workload.")
                     print("The script will continue, but deployment may fail without proper permissions.")
@@ -875,17 +897,22 @@ def create_azure_service_principal(user_data):
                 "Failed to retrieve service principal object ID. Please check the Azure CLI command output."
             )
             print(spn_show_result.stderr)
-            return None
-
-        try:
-            spn_show_data = json.loads(spn_show_result.stdout)
-            spn_data["object_id"] = spn_show_data["id"]
-        except json.JSONDecodeError:
-            print(
-                "Failed to decode JSON from the output. Please check the Azure CLI command output."
-            )
-            print(spn_show_result.stdout)
-            return None
+            print("\n\033[1;33mWARNING: Using a placeholder value for Object ID.\033[0m")
+            print("This may cause issues during deployment. You should verify the Object ID manually.")
+            spn_data["object_id"] = "PLACEHOLDER-OBJECT-ID"
+        else:
+            try:
+                spn_show_data = json.loads(spn_show_result.stdout)
+                spn_data["object_id"] = spn_show_data["id"]
+                print(f"Successfully retrieved Object ID: {spn_data['object_id']}")
+            except json.JSONDecodeError:
+                print(
+                    "Failed to decode JSON from the output. Please check the Azure CLI command output."
+                )
+                print(spn_show_result.stdout)
+                print("\n\033[1;33mWARNING: Using a placeholder value for Object ID.\033[0m")
+                print("This may cause issues during deployment. You should verify the Object ID manually.")
+                spn_data["object_id"] = "PLACEHOLDER-OBJECT-ID"
             
         # Assign required roles
         print("Assigning necessary roles to the Service Principal...")
@@ -896,6 +923,7 @@ def create_azure_service_principal(user_data):
             "Contributor",
             "Storage Blob Data Owner",
             "Key Vault Administrator"
+            "App Configuration Data Owner"
         ]
         
         # Try to assign roles
@@ -1169,6 +1197,17 @@ def main():
     display_instructions()
     check_prerequisites()
 
+    # Add information about permissions
+    print("\n\033[1mPermissions Information:\033[0m")
+    print("The following roles are required for the deployment to work properly:")
+    print("  - User Access Administrator: For assigning roles to resources")
+    print("  - Contributor: For creating and managing Azure resources")
+    print("  - Storage Blob Data Owner: For accessing blob storage data")
+    print("  - Key Vault Administrator: For managing secrets in Key Vault")
+    print("  - App Configuration Data Owner: For managing app configuration data")
+    print("\nThe script will attempt to assign these roles, but if you don't have sufficient permissions,")
+    print("you may need to ask an administrator to assign them later.")
+
     print("\nStarting setup process...\n")
     user_data = get_user_input()
     
@@ -1304,7 +1343,7 @@ def main():
             print("\nChecking role assignments for the Managed Identity...")
             required_roles = [
                 "Contributor", 
-                "Role Based Access Control Administrator", 
+                "User Access Administrator", 
                 "Storage Blob Data Owner", 
                 "Key Vault Administrator",
                 "App Configuration Data Owner"
@@ -1487,19 +1526,6 @@ def main():
             print(f"- Using existing Service Principal: {user_data['spn_name']}")
         else:
             print(f"- Service Principal has been created: {user_data['spn_name']}")
-    
-    # Add information about permissions
-    print("\n\033[1mPermissions Information:\033[0m")
-    print("The following roles are required for the deployment to work properly:")
-    print("  - User Access Administrator: For assigning roles to resources")
-    print("  - Contributor: For creating and managing Azure resources")
-    print("  - Storage Blob Data Owner: For accessing blob storage data")
-    print("  - Key Vault Administrator: For managing secrets in Key Vault")
-    
-    print("\nIf you saw permission errors during setup:")
-    print("1. If your user doesn't have permissions to assign roles, contact your Azure")
-    print("   subscription administrator to assign the roles listed above.")
-    print("2. Provide them with these details:")
     
     if use_managed_identity:
         print(f"   - Managed Identity Name: {identity_data['name']}")
