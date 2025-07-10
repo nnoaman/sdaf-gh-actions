@@ -789,7 +789,16 @@ def create_azure_service_principal(user_data):
         # Continue with verifying and assigning required roles
         print("Verifying and assigning required roles to the Service Principal...")
         
-        # Check role assignment to avoid duplication errors
+        # Define the recommended roles for existing SPN
+        recommended_roles = [
+            "User Access Administrator",
+            "Contributor",
+            "Storage Blob Data Owner",
+            "Key Vault Administrator",
+            "App Configuration Data Owner"
+        ]
+        
+        # First check User Access Administrator role assignment to avoid duplication errors
         check_role_args = [
             "role",
             "assignment",
@@ -922,7 +931,7 @@ def create_azure_service_principal(user_data):
             "User Access Administrator",
             "Contributor",
             "Storage Blob Data Owner",
-            "Key Vault Administrator"
+            "Key Vault Administrator",
             "App Configuration Data Owner"
         ]
         
