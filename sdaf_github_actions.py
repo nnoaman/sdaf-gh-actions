@@ -459,6 +459,12 @@ def get_user_input():
     if add_suser in ['y', 'yes']:
         s_username = input("Enter your SAP S-Username: ").strip()
         s_password = getpass.getpass("Enter your SAP S-User password: ").strip()
+    
+    # Docker image for SDAF
+    default_docker_image = "ghcr.io/Azure/sap-automation:main"
+    print(f"\nDocker image for SDAF (default: {default_docker_image})")
+    custom_docker_image = input(f"Enter a custom Docker image or press Enter to use the default: ").strip()
+    docker_image = custom_docker_image if custom_docker_image else default_docker_image
 
     return {
         "token": token,
@@ -481,6 +487,7 @@ def get_user_input():
         "spn_password": spn_password if 'spn_password' in locals() else None,
         "spn_object_id": spn_object_id if 'spn_object_id' in locals() else None,
         # Managed Identity related parameters
+        "use_managed_identity": use_managed_identity,
         "use_existing_identity": use_existing_identity if 'use_existing_identity' in locals() else False,
         "identity_name": identity_name if 'identity_name' in locals() else None,
         "identity_client_id": identity_client_id if 'identity_client_id' in locals() else None,
@@ -490,7 +497,24 @@ def get_user_input():
         "s_username": s_username,
         "s_password": s_password,
         "resource_group": resource_group_name,
+        "docker_image": docker_image,
     }
+
+
+def add_repository_variables(github_client, repo_full_name, variables):
+    """
+    Add variables to the repository level.
+    
+    Args:
+        github_client: The authenticated GitHub client
+        repo_full_name: Full repository name (owner/repo)
+        variables: Dictionary of variables to add as repository variables
+                  (non-sensitive information that can be visible in logs)
+    """
+    repo = github_client.get_repo(repo_full_name)
+    for variable_name, variable_value in variables.items():
+        repo.create_variable(variable_name, variable_value)
+        print(f"*** Variable {variable_name} added to repository {repo_full_name}.***")
 
 
 def add_repository_secrets(github_client, repo_full_name, secrets):
@@ -521,6 +545,31 @@ def add_environment_secrets(github_client, repo_full_name, environment_name, sec
         except Exception as e:
             print(f"Error adding secret {secret_name}: {str(e)}")
             print("Continuing with other secrets...")
+
+
+def add_repository_variables(github_client, repo_full_name, variables):
+    """
+    Add variables to the repository level.
+    
+    Args:
+        github_client: The authenticated GitHub client
+        repo_full_name: Full repository name (owner/repo)
+        variables: Dictionary of variables to add as repository variables
+                  (non-sensitive information that can be visible in logs)
+    """
+    repo = github_client.get_repo(repo_full_name)
+    for variable_name, variable_value in variables.items():
+        # Skip empty values
+        if variable_value is None or variable_value == "":
+            print(f"Skipping variable {variable_name} because it has an empty value.")
+            continue
+            
+        try:
+            repo.create_variable(variable_name, str(variable_value))
+            print(f"*** Variable {variable_name} added to repository {repo_full_name}.***")
+        except Exception as e:
+            print(f"Error adding variable {variable_name}: {str(e)}")
+            print("Continuing with other variables...")
 
 
 def add_environment_variables(github_client, repo_full_name, environment_name, variables):
@@ -1029,13 +1078,50 @@ def trigger_github_workflow(user_data, workflow_id):
         "Authorization": f"token {user_data['token']}",
         "Accept": "application/vnd.github.v3+json",
     }
-    data = {
-        "ref": "main",
-        "inputs": {
+    if user_data.get("use_managed_identity") and not user_data.get("identity_id"):
+        print("\nWARNING: Managed identity is enabled but identity_id is missing.")
+        print("This may cause GitHub workflow to fail. Checking if we can construct the ID...")
+        
+        # Try to construct ID from components
+        if all(user_data.get(k) for k in ["identity_name", "subscription_id", "resource_group"]):
+            constructed_id = (
+                f"/subscriptions/{user_data['subscription_id']}/"
+                f"resourceGroups/{user_data['resource_group']}/"
+                f"providers/Microsoft.ManagedIdentity/userAssignedIdentities/"
+                f"{user_data['identity_name']}"
+            )
+            print(f"Constructed MSI ID: {constructed_id}")
+            user_data["identity_id"] = constructed_id
+        else:
+            print("ERROR: Cannot construct MSI ID. Missing required components.")
+            print("Please ensure identity_name, subscription_id, and resource_group are set.")
+    
+    # Prepare workflow inputs with safe dictionary access
+    try:
+        workflow_inputs = {
             "environment": user_data["environment"],
             "region": user_data["region_map"],
             "deployer_vnet": user_data["vnet_name"],
-        },
+            "use_msi": "true" if user_data.get("use_managed_identity") else "false",
+            "msi_id": user_data.get("identity_id", "") if user_data.get("use_managed_identity") else "",
+        }
+        
+        # Validate MSI ID format if MSI is enabled
+        if workflow_inputs["use_msi"] == "true" and workflow_inputs["msi_id"]:
+            msi_id = workflow_inputs["msi_id"]
+            msi_id_lower = msi_id.lower()  # normalize for validation only
+            if not (msi_id_lower.startswith("/subscriptions/") and 
+                    "resourcegroups/" in msi_id_lower and 
+                    "microsoft.managedidentity/userassignedidentities/" in msi_id_lower):
+                print(f"WARNING: MSI ID format may be invalid: {msi_id}")
+                print("Expected format: /subscriptions/.../resourceGroups/.../providers/Microsoft.ManagedIdentity/userAssignedIdentities/...")
+    except KeyError as e:
+        print(f"ERROR: Missing required workflow input: {e}")
+        return False
+        
+    data = {
+        "ref": "main",
+        "inputs": workflow_inputs
     }
 
     response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -1043,9 +1129,30 @@ def trigger_github_workflow(user_data, workflow_id):
     if response.status_code == 204:
         print(f"Workflow '{workflow_id}' triggered successfully.")
         time.sleep(70)
+        return True
+    elif response.status_code == 401:
+        print("ERROR: Authentication failed. Check your GitHub token permissions.")
+        return False
+    elif response.status_code == 404:
+        print(f"ERROR: Workflow '{workflow_id}' or repository '{user_data['repo_name']}' not found.")
+        print("Verify the workflow file exists and the repository name is correct.")
+        return False
+    elif response.status_code == 422:
+        print("ERROR: Invalid workflow inputs or repository configuration.")
+        try:
+            error_details = response.json()
+            print(f"Details: {error_details}")
+        except:
+            print(f"Response: {response.text}")
+        return False
     else:
-        print(f"Failed to trigger workflow '{workflow_id}': {response.status_code}")
-        print(response.text)
+        print(f"ERROR: Failed to trigger workflow '{workflow_id}': HTTP {response.status_code}")
+        try:
+            error_details = response.json()
+            print(f"Error details: {error_details}")
+        except:
+            print(f"Response: {response.text}")
+        return False
 
 
 def diagnose_service_principal_issues(spn_appid, subscription_id):
@@ -1303,7 +1410,7 @@ def main():
                 "name": user_data["identity_name"],
                 "resourceGroup": user_data["resource_group"],
                 "subscriptionId": user_data["subscription_id"],
-                "identityId": user_data["identity_id"],
+                "identityId": user_data.get("identity_id"),
                 "principalId": user_data["identity_principal_id"],
                 "clientId": user_data["identity_client_id"],
                 "roleAssignments": []  # No new role assignments were created
@@ -1445,6 +1552,12 @@ def main():
                 print("\nFailed to create/configure User-Assigned Managed Identity.")
                 print("Cannot continue without creating the managed identity. Exiting.")
                 exit(1)
+            
+            # Update user_data with the newly created identity information for later use
+            user_data["identity_id"] = identity_data["identityId"]
+            user_data["identity_name"] = identity_data["name"]
+            user_data["identity_client_id"] = identity_data["clientId"]
+            user_data["identity_principal_id"] = identity_data["principalId"]
     else:
         # Create or use existing Service Principal based on user input
         spn_data = create_azure_service_principal(user_data)
@@ -1464,6 +1577,14 @@ def main():
     # Generate secrets for the repository
     repository_secrets = generate_repository_secrets(user_data, user_data["gh_app_id"], user_data["private_key"])
     add_repository_secrets(github_client, user_data["repo_name"], repository_secrets)
+    
+    # Add repository-level variables
+    # The Docker image can be customized by the user during setup
+    repository_variables = {
+        "DOCKER_IMAGE": user_data["docker_image"]
+    }
+    print("\nAdding variables to repository level...")
+    add_repository_variables(github_client, user_data["repo_name"], repository_variables)
     
     # Prepare environment variables (non-sensitive information)
     environment_variables = {
@@ -1549,11 +1670,16 @@ def main():
     print("3. The script has continued, but deployment may fail if permissions are not")
     print("   properly assigned before running workflows.")
     
-    # First trigger the environment creation workflow
+    # Trigger the environment creation workflow
     workflow_id = "00-create-environment.yml"
     print(f"\nTriggering workflow '{workflow_id}' to create the environment...")
-    trigger_github_workflow(user_data, workflow_id)
-    print("Environment creation workflow has been triggered.")
+    
+    if not trigger_github_workflow(user_data, workflow_id):
+        print("CRITICAL ERROR: Failed to trigger environment creation workflow.")
+        print("Cannot continue without successfully triggering the workflow.")
+        exit(1)
+    
+    print("Environment creation workflow has been triggered successfully.")
     
     # Prompt for environment name after triggering the workflow
     print("\nWait for the workflow to complete, then:")
@@ -1591,8 +1717,6 @@ def main():
     print(f"Environment '{environment_name}' has been configured with all necessary variables and secrets.")
     print("You can now proceed with deploying your SAP environment using GitHub Actions.")
     
-
-
 if __name__ == "__main__":
     main()
 
