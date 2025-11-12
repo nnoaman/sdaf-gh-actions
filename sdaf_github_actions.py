@@ -1586,7 +1586,7 @@ def main():
     print("\nAdding variables to repository level...")
     add_repository_variables(github_client, user_data["repo_name"], repository_variables)
     
-    # Prepare environment variables (non-sensitive information)
+    # Prepare environment variables
     environment_variables = {
         "ARM_SUBSCRIPTION_ID": user_data["subscription_id"],
         "ARM_TENANT_ID": user_data["tenant_id"],
@@ -1595,7 +1595,7 @@ def main():
         "S_USERNAME": user_data["s_username"] if user_data["s_username"] else "Add SAP S Username here"
     }
     
-    # Prepare environment secrets (sensitive information)
+    # Prepare environment secrets
     environment_secrets = {}
     
     if use_managed_identity:
@@ -1612,7 +1612,7 @@ def main():
             "ARM_SPN_OBJECT_ID": spn_for_github_auth["object_id"],
         })
         
-        # Add client secret to secrets (sensitive)
+        # Add client secret to secrets
         environment_secrets["ARM_SPN_CLIENT_SECRET"] = spn_for_github_auth["password"]
         
         print("Environment configuration prepared for User Managed Identity with SPN for initial authentication")
@@ -1622,12 +1622,13 @@ def main():
             "ARM_CLIENT_ID": spn_data["appId"],
             "ARM_OBJECT_ID": spn_data["object_id"],
         })
-        # Add client secret to secrets (sensitive)
+        # Add client secret to secrets
         environment_secrets["ARM_CLIENT_SECRET"] = spn_data["password"]
         print("Environment configuration prepared for Service Principal (USE_MSI=false)")
 
-    # Add SAP S-User password to secrets (sensitive), with a placeholder if not provided
+    # Add SAP S-User password and PAT to Environment secrets, with a placeholder if not provided
     environment_secrets["S_PASSWORD"] = user_data["s_password"] if user_data["s_password"] else "Add SAP S Password here"
+    environment_secrets["PAT"] = user_data["token"]
     
     print(
         f"\nInitial setup completed successfully!\n"
@@ -1691,13 +1692,13 @@ def main():
     # Update the environment name for federated identity and secrets
     user_data["environment_name"] = environment_name
     
-    # Add variables to the newly created environment (non-sensitive information)
+    # Add variables to the newly created environment
     print(f"\nAdding variables to environment '{environment_name}'...")
     add_environment_variables(
         github_client, user_data["repo_name"], environment_name, environment_variables
     )
     
-    # Add secrets to the newly created environment (sensitive information)
+    # Add secrets to the newly created environment
     if environment_secrets:
         print(f"\nAdding secrets to environment '{environment_name}'...")
         add_environment_secrets(
