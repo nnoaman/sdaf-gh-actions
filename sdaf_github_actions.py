@@ -121,7 +121,7 @@ def get_user_input():
     """
     input(
         "Step 1: Create a repository using the Azure SAP Automation Deployer template.\n"
-        "Visit this link to create the repository: https://github.com/new?template_name=azure-sap-automation-deployer&template_owner=NSpirit7\n"
+        "Visit this link to create the repository: https://github.com/new?template_name=sap-automation-gh-bootstrap&template_owner=Azure\n"
         "Press Enter after creating the repository.\n"
     )
 
@@ -1581,7 +1581,11 @@ def main():
     # Add repository-level variables
     # The Docker image can be customized by the user during setup
     repository_variables = {
-        "DOCKER_IMAGE": user_data["docker_image"]
+        "DOCKER_IMAGE": user_data["docker_image"],
+        "TF_IN_AUTOMATION": "true",
+        "TF_LOG": "ERROR",
+        "ANSIBLE_CORE_VERSION": "2.16",
+        "TF_VERSION": "1.11.3"
     }
     print("\nAdding variables to repository level...")
     add_repository_variables(github_client, user_data["repo_name"], repository_variables)
