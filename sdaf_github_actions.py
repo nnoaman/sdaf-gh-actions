@@ -197,24 +197,45 @@ def get_user_input():
     input("Press Enter after installing the GitHub App.\n")
 
     while True:
-        environment = input("Enter the Control Plane code (e.g., 'MGMT', 'PROD', etc), max five characters: ").strip()
-        if len(environment) <= 5:
+        control_plane_name = input(
+            "Enter the Control Plane name (e.g., 'MGMT-WEEU-DEP01')\n"
+            "Format: <Environment>-<RegionCode>-<VNetName>\n"
+            "  - Environment: max 5 characters (e.g., MGMT, PROD)\n"
+            "  - Region Code: 4 characters (e.g., WEEU, NOEU, EUS2)\n"
+            "  - VNet Name: max 7 characters (e.g., DEP01)\n"
+            "Control Plane name: "
+        ).strip().upper()
+        
+        # Validate format
+        parts = control_plane_name.split('-')
+        if len(parts) != 3:
+            print("Error: Control Plane name must have format: <Environment>-<RegionCode>-<VNetName>")
+            print("Example: MGMT-WEEU-DEP01")
+            continue
+        
+        environment = parts[0]
+        region_code = parts[1]
+        vnet_name = parts[2]
+        
+        # Validate each component
+        if len(environment) > 5:
+            print(f"Error: Environment code '{environment}' must be maximum 5 characters.")
+            continue
+        if len(region_code) != 4:
+            print(f"Error: Region code '{region_code}' must be exactly 4 characters.")
+            continue
+        if len(vnet_name) > 7:
+            print(f"Error: VNet name '{vnet_name}' must be maximum 7 characters.")
+            continue
+        
+        print(f"\nParsed Control Plane components:")
+        print(f"  Environment: {environment}")
+        print(f"  Region Code: {region_code}")
+        print(f"  VNet Name: {vnet_name}")
+        
+        confirm = input("Is this correct? (y/n): ").strip().lower()
+        if confirm in ['y', 'yes']:
             break
-        print(
-            "Error: The Control Plane code must be a maximum of five characters. Please try again."
-        )
-
-    while True:
-        vnet_name = input("Enter the Deployer VNet name (e.g., 'DEP01', etc), max seven characters: ").strip()
-        if len(vnet_name) <= 7:
-            break
-        print(
-            "Error: The Deployer VNet name must be a maximum of seven characters. Please try again."
-        )
-
-    region_map = input(
-        "Enter Azure region to deploy the environment to. Please use the short name (e.g., 'northeurope', 'westeurope', 'eastus2', etc): "
-    ).strip()
 
     # Azure details
     # Check if the user is logged in and get subscription and tenant details
@@ -292,6 +313,7 @@ def get_user_input():
     identity_client_id = None
     identity_principal_id = None
     identity_id = None
+    region_map = ""
     
     # Handle User-Assigned Managed Identity details if that option was selected
     resource_group_name = ""
@@ -332,6 +354,12 @@ def get_user_input():
                 print(identity_show_result.stdout)
                 exit(1)
         else:
+            # Ask for Azure region for creating the new Managed Identity
+            region_map = input(
+                f"\nEnter Azure region to deploy to (full name for region code '{region_code}').\n"
+                "Please use the short name (e.g., 'northeurope', 'westeurope', 'eastus2'): "
+            ).strip()
+            
             # Ask for resource group name for creating a new Managed Identity
             print("\nYou need to specify a resource group for creating the Managed Identity.")
             default_resource_group = f"{environment}-INFRASTRUCTURE-RG"
@@ -344,7 +372,7 @@ def get_user_input():
                     if resource_group_name:
                         break
                     print("Resource group name cannot be empty. Please enter a valid name.")
-    
+
     # Now handle Service Principal configuration
     print("\n--- Service Principal Configuration ---")
     if not use_managed_identity:
@@ -474,7 +502,9 @@ def get_user_input():
         "gh_app_name": gh_app_name,
         "gh_app_id": gh_app_id,
         "private_key": private_key,
+        "control_plane_name": control_plane_name,
         "environment": environment,
+        "region_code": region_code,
         "vnet_name": vnet_name,
         "region_map": region_map,
         "subscription_id": subscription_id,
@@ -1099,9 +1129,7 @@ def trigger_github_workflow(user_data, workflow_id):
     # Prepare workflow inputs with safe dictionary access
     try:
         workflow_inputs = {
-            "environment": user_data["environment"],
-            "region": user_data["region_map"],
-            "deployer_vnet": user_data["vnet_name"],
+            "control_plane_name": user_data["control_plane_name"],
             "use_msi": "true" if user_data.get("use_managed_identity") else "false",
             "msi_id": user_data.get("identity_id", "") if user_data.get("use_managed_identity") else "",
         }
